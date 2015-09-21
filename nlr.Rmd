@@ -67,3 +67,9 @@ splom(~ wine$red.wine)
 splom(~ wine$white.wine)
 ```
 
+
+```{r, fig.width = 25, fig.height = 25, out.height=25, out.height=25}
+by(wine$red.wine, wine$red.wine$quality, function(x) splom(~ x - x$quality, main = paste("Quality: ", x$quality[1])))
+by(wine$white.wine, wine$white.wine$quality, function(x) splom(~ x - x$quality, main = paste("Quality: ", x$quality[1])))
+
+```
