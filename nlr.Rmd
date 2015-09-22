@@ -2,7 +2,11 @@
 title: "Wine"
 author: "Andy"
 date: "September 21, 2015"
-output: html_document
+output: 
+  pdf_document: 
+    fig_crop: no
+    keep_tex: yes
+    latex_engine: xelatex
 ---
 ```{r set-options, echo=FALSE, cache=FALSE}
 options(width=100)
@@ -14,6 +18,9 @@ knitr::opts_chunk$set(warning=FALSE, messages=FALSE, cache=T)
 
 ```{r}
 library("lattice")
+library("nortest")
+library("moments")
+library("corrplot")
 ```
 
 ```{r}
@@ -62,14 +69,88 @@ lapply(wine$red.wine, function(x) histogram( ~ x))
 lapply(wine$white.wine, function(x) histogram( ~ x))
 ```
 
-```{r, fig.width = 25, fig.height = 25, out.height=25, out.height=25}
+```{r, fig.width = 15, fig.height = 15}
 splom(~ wine$red.wine)
 splom(~ wine$white.wine)
 ```
 
 
-```{r, fig.width = 25, fig.height = 25, out.height=25, out.height=25}
+```{r, fig.width = 15, fig.height = 15}
 by(wine$red.wine, wine$red.wine$quality, function(x) splom(~ x - x$quality, main = paste("Quality: ", x$quality[1])))
 by(wine$white.wine, wine$white.wine$quality, function(x) splom(~ x - x$quality, main = paste("Quality: ", x$quality[1])))
-
 ```
+
+```{r}
+p1 <- splom(~ wine$red.wine) 
+p2 <- splom(~ subset(wine$red.wine, wine$red.wine$quality == 5))
+plot(p1, split = c(1, 1, 2, 1))
+plot(p2, split = c(2, 1, 2, 1), newpage = FALSE)
+```
+
+```{r}
+lapply(wine$red.wine, shapiro.test)
+lapply(wine$red.wine, function(x) { shapiro.test(log(x)) } )
+
+lapply(wine$white.wine, shapiro.test)
+lapply(wine$white.wine, function(x) { shapiro.test(log(x)) } )
+```
+
+
+```{r}
+lapply(wine$red.wine, summary)
+lapply(wine$red.wine, function(x) bwplot(~ x | wine$red.wine$quality))
+```
+
+Убираем два аутлайера.
+```{r}
+bwplot(~total.sulfur.dioxide, data = wine$red.wine)
+subset(wine$red.wine, wine$red.wine$total.sulfur.dioxide > 170)
+
+wine$red.wine <- wine$red.wine[-which(wine$red.wine$total.sulfur.dioxide > 170), ]
+```
+
+Еще аутлайеры
+```{r}
+bwplot(~sulphates, data = wine$red.wine)
+subset(wine$red.wine, wine$red.wine$sulphates > 1.7)
+
+wine$red.wine <- wine$red.wine[-which(wine$red.wine$sulphates > 1.7),]
+```
+
+```{r}
+bwplot(~chlorides, data = wine$red.wine)
+subset(wine$red.wine, wine$red.wine$chlorides > 0.6)
+
+wine$red.wine <- wine$red.wine[-which(wine$red.wine$chlorides > 0.6),]
+```
+
+
+# Корреляции
+
+```{r}
+corr <- cor(wine$red.wine, method = "pearson")
+corrplot(corr, method="number")
+
+corr <- cor(wine$red.wine, method = "spearman")
+corrplot(corr, method="number")
+```
+
+# Линейная регрессия
+
+```{r}
+lin.fit <- lm(quality ~ volatile.acidity + chlorides + free.sulfur.dioxide + total.sulfur.dioxide + pH + sulphates + alcohol, data = wine$red.wine)
+summary(lin.fit)
+confint(lin.fit)
+library(aod)
+wald.test(b = coef(lin.fit), Sigma = vcov(lin.fit), Terms = 1:4)
+```
+
+
+??? 
+```{r}
+library(MASS)
+st.res <- studres(lin.fit)
+head(st.res)
+plot(y = st.res, x = lin.fit$fitted.values)
+```
+
