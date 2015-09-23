@@ -45,3 +45,10 @@ N = 1000
 df = data.frame(x=runif(N,0,1000), y = as.factor(sample(c(1,2,3,4),size=100, prob=c(0.5,0.25,0.1,0.15), replace = TRUE)))
 df$z = apply(df, function(row) { sigmoid(as.numeric(row[1]), 1) + rnorm(1)}, MARGIN=1)
 nls(formula = z ~ a / (b+exp(-(alpha*x))), df, start=list(a=42,b=10,alpha=0.1))
+
+
+#working 2 variables
+a = model.matrix(z ~ .)
+a$z = df$z
+
+nls(formula = z ~ a / (b+exp(-(alpha*x+a2*y2+a3*y3+a4*y4))), a, start=list(a=42,b=10,alpha=0.1,a2=0.1,a3=2,a4=1))
