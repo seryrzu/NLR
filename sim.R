@@ -48,7 +48,7 @@ nls(formula = z ~ a / (b+exp(-(alpha*x))), df, start=list(a=42,b=10,alpha=0.1))
 
 
 #working 2 variables
-a = model.matrix(z ~ .)
+a = data.frame(model.matrix(z ~ .))
 a$z = df$z
 
 nls(formula = z ~ a / (b+exp(-(alpha*x+a2*y2+a3*y3+a4*y4))), a, start=list(a=42,b=10,alpha=0.1,a2=0.1,a3=2,a4=1))
