@@ -26,10 +26,11 @@ cross.validation <- function(fo, df, perc = 0.8) {
   lin.fit <- lm(fo, data = train)
   predicted <- predict(lin.fit, test)
   
-  list(rmse = rmse(predicted - test$density, rep(0, length(predicted))),
-       median = median((predicted - test$density)^2)
+  list(rmse = rmse(predicted - test$z, rep(0, length(predicted))),
+       median = median((predicted - test$z)^2)
   )
 }
 
+fo <- z ~ .
 
-
+pr <- replicate(1000, cross.validation(fo, df))
