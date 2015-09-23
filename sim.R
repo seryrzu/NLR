@@ -34,3 +34,4 @@ cross.validation <- function(fo, df, perc = 0.8) {
 fo <- z ~ .
 
 pr <- replicate(1000, cross.validation(fo, df))
+hist(unlist(pr[1,]))
