@@ -9,11 +9,11 @@ output: html_document
 
 ```{r}
 weights = c(0.02,0.5,1.5,3.2)
-sigmoid <- function(x,y, alpha = 0.1) { 5 / (0.2 + exp(-(x * alpha + weights[y]))) }
+sigmoid <- function(x,y, alpha = 0.1) { 0.75 / (1 + exp(-(x * alpha + weights[y]))) }
 
 N = 100
 df = data.frame(x=runif(N,1,1000), y = as.factor(sample(c(1,2,3,4),size=100, prob=c(0.5,0.25,0.1,0.15), replace = TRUE)))
-df$z = apply(df, function(row) { sigmoid(as.numeric(row[1]), as.numeric(row[2])) + rnorm(1)}, MARGIN=1)
+df$z = apply(df, function(row) { sigmoid(as.numeric(row[1]), as.numeric(row[2])) + rnorm(n=1, sd=2)}, MARGIN=1)
 head(df)
 ```
 
@@ -42,7 +42,9 @@ cross.validation2 <- function(df, perc = 0.8) {
   train.ind <- sample(1:nrow(df), nrow(df) * perc)
   train <- df[train.ind,]
   test <- df[-train.ind,]
-  nlin.fit <- nls(formula = z ~ a / (b+exp(-(alpha*x + weights[y]))), train, start=list(a=0.1,b=0.3,alpha=0.1))
+  start = sapply(train.ind, function(i) { 1.0 / (1+exp(-(weights[df[i,]$y])))})
+  
+   nlin.fit <- nls(formula = z ~ a / (1+exp(-(alpha*x + weights[y]))), train, start=list(a=mean(start),alpha=0.001), algorithm = "port")
   predicted <- predict(nlin.fit, test)
   
   list(rmse = rmse(predicted - test$z, rep(0, length(predicted))),
@@ -60,7 +62,7 @@ pr <- replicate(1000, cross.validation(fo, df))
 
 Умираем с начальными данными для градиента.
 ```{r}
-nlin.fit <- nls(formula = z ~ a / (b+exp(-(alpha*x + weights[y]))), df, start=list(a=5, b=0.2, alpha=0.1))
+nlin.fit <- nls(formula = z ~ a / (1+exp(-(alpha*x + weights[y]))), df, start=list(a=mean(df$z), alpha=0.0),algorithm="port")
 summary(nlin.fit)
 
 pr2 <- replicate(1000, cross.validation2(df, perc = 0.8))
