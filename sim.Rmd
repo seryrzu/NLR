@@ -13,59 +13,36 @@ sigmoid <- function(x,y, alpha = 0.1) { 0.75 / (1 + exp(-(x * alpha + weights[y]
 
 N = 100
 df = data.frame(x=runif(N,1,1000), y = as.factor(sample(c(1,2,3,4),size=100, prob=c(0.5,0.25,0.1,0.15), replace = TRUE)))
-df$z = apply(df, function(row) { sigmoid(as.numeric(row[1]), as.numeric(row[2])) + rnorm(n=1, sd=2)}, MARGIN=1)
 head(df)
 ```
-
-Будем использовать кросс валидацию, чтобы показать, что ошибка предсказания нелинейной регрессией оказывается меньше (в смысле уточняемом ниже), чем
-при предсказании линейным образом.
 
 ```{r}
 rmse <- function(obs, theor) {
   sqrt(sum((obs - theor)^2)/length(obs))
 }
+```
 
-cross.validation <- function(fo, df, perc = 0.8) {
+```{r}
+go <- function(perc = 0.8) {
+  df <- data.frame(x=runif(N,1,1000), y = as.factor(sample(c(1,2,3,4),size=100, prob=c(0.5,0.15,0.2,0.15), replace = TRUE)))
+  df$z = apply(df, function(row) { sigmoid(as.numeric(row[1]), as.numeric(row[2])) + rnorm(n=1, sd=2)}, MARGIN=1)
   train.ind <- sample(1:nrow(df), nrow(df) * perc)
   train <- df[train.ind,]
   test <- df[-train.ind,]
-  lin.fit <- lm(fo, data = train)
-  predicted <- predict(lin.fit, test)
-  
-  list(rmse = rmse(predicted - test$z, rep(0, length(predicted))),
-       median = median((predicted - test$z)^2),
-       mean = mean((predicted - test$z)^2)
-  )
-}
-
-cross.validation2 <- function(df, perc = 0.8) {
-  train.ind <- sample(1:nrow(df), nrow(df) * perc)
-  train <- df[train.ind,]
-  test <- df[-train.ind,]
+  lin.fit <- lm(z ~ ., data = train)
+  predicted.lin <- predict(lin.fit, test)
   start = sapply(train.ind, function(i) { 1.0 / (1+exp(-(weights[df[i,]$y])))})
+  tryCatch(nlin.fit <- nls(formula = z ~ a / (1+exp(-(alpha*x + weights[y]))), train, start=list(a=mean(start),alpha=0.001), algorithm = "port"),
+           error = return)
+  predicted.nlin <- predict(nlin.fit, test)
   
-   nlin.fit <- nls(formula = z ~ a / (1+exp(-(alpha*x + weights[y]))), train, start=list(a=mean(start),alpha=0.001), algorithm = "port")
-  predicted <- predict(nlin.fit, test)
-  
-  list(rmse = rmse(predicted - test$z, rep(0, length(predicted))),
-       median = median((predicted - test$z)^2),
-       mean = mean((predicted - test$z)^2)
-  )
+  list(rmse.lin = rmse(predicted.lin - test$z, rep(0, length(predicted.lin))),
+       rmse.nlin = rmse(predicted.nlin - test$z, rep(0, length(predicted.nlin))))
 }
 ```
 
-Предсказываем третий столбец линейно по остальным:
 ```{r}
-fo <- z ~ .
-pr <- replicate(1000, cross.validation(fo, df))
-```
-
-Умираем с начальными данными для градиента.
-```{r}
-nlin.fit <- nls(formula = z ~ a / (1+exp(-(alpha*x + weights[y]))), df, start=list(a=mean(df$z), alpha=0.0),algorithm="port")
-summary(nlin.fit)
-
-pr2 <- replicate(1000, cross.validation2(df, perc = 0.8))
-hist(unlist(pr[1,]), col = "red")
-hist(unlist(pr2[1,]), add = T, col = "green")
+res <- replicate(1000, go())
+hist(unlist(res[1,]), col = "red")
+hist(unlist(res[2,]), add = T, col = "green")
 ```
